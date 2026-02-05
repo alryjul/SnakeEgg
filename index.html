@@ -11,7 +11,7 @@
       <header class="app__header">
         <div>
           <h1>Snake</h1>
-          <p class="muted">Arrow keys or WASD. Enter to start. Space to pause. R to restart.</p>
+          <p class="muted">Arrows/WASD or swipe. Enter or Start to begin. Space or Pause to toggle. R to restart.</p>
         </div>
         <div class="score">
           <span class="score__label">Score</span>
@@ -29,11 +29,11 @@
 
       <footer class="app__footer">
         <button id="start" class="btn" type="button">Start</button>
-        <button id="restart" class="btn" type="button">Restart</button>
+        <button id="pause" class="btn" type="button">Pause</button>
       </footer>
     </main>
 
     <script src="main.js" defer></script>
-    <audio id="evil-laugh" src="assets/evil-laugh.mp3" preload="auto"></audio>
+    <audio id="evil-laugh" src="assets/evil-laugh.mp3" preload="metadata" playsinline></audio>
   </body>
 </html>

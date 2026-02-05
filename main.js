@@ -26,7 +26,7 @@
   const eggMan = document.getElementById("egg-man");
   const laughAudio = document.getElementById("evil-laugh");
   const scoreEl = document.getElementById("score");
-  const restartBtn = document.getElementById("restart");
+  const pauseBtn = document.getElementById("pause");
 
   const cells = [];
 
@@ -185,6 +185,17 @@
   ];
   let lastStatus = game.getState().status;
   let currentScold = "";
+  let audioUnlocked = false;
+  let laughVolume = 1;
+  if (laughAudio) {
+    laughAudio.autoplay = false;
+    laughAudio.loop = false;
+    laughAudio.pause();
+    laughAudio.currentTime = 0;
+    laughVolume = typeof laughAudio.volume === "number" ? laughAudio.volume : 1;
+    laughAudio.muted = true;
+    laughAudio.volume = 0;
+  }
 
   function render(state) {
     cells.forEach((cell) => {
@@ -219,11 +230,14 @@
     } else if (state.status === "gameover") {
       if (lastStatus !== "gameover") {
         currentScold = scolds[Math.floor(Math.random() * scolds.length)];
-        if (laughAudio) {
-          if (laughAudio.readyState >= 2) {
-            laughAudio.currentTime = 0;
+        if (laughAudio && laughAudio.readyState >= 2) {
+          if (!audioUnlocked) {
             laughAudio.play().catch(() => {});
           }
+          laughAudio.muted = false;
+          laughAudio.volume = laughVolume;
+          laughAudio.currentTime = 0;
+          laughAudio.play().catch(() => {});
         }
       }
       overlayText.textContent = currentScold;
@@ -261,6 +275,7 @@
     if (key === "r" || key === "R") {
       event.preventDefault();
       game.reset();
+      game.start();
     }
 
     if (key === "Enter") {
@@ -271,12 +286,113 @@
 
   document.addEventListener("keydown", handleKey);
   const startBtn = document.getElementById("start");
-  startBtn.addEventListener("click", () => game.start());
-  restartBtn.addEventListener("click", () => game.reset());
+  const updatePauseLabel = () => {
+    const status = game.getState().status;
+    pauseBtn.textContent = status === "paused" ? "Resume" : "Pause";
+  };
+  const updateStartLabel = () => {
+    const status = game.getState().status;
+    startBtn.textContent = status === "idle" ? "Start" : "Restart";
+  };
+  const unlockAudio = () => {
+    if (!laughAudio || audioUnlocked) {
+      return;
+    }
+    laughAudio.play()
+      .then(() => {
+        laughAudio.pause();
+        laughAudio.currentTime = 0;
+        audioUnlocked = true;
+      })
+      .catch(() => {});
+  };
+  startBtn.addEventListener("click", () => {
+    if (game.getState().status === "idle") {
+      game.start();
+    } else {
+      game.reset();
+      game.start();
+    }
+  });
+  pauseBtn.addEventListener("click", () => {
+    game.togglePause();
+    updatePauseLabel();
+  });
+
+  let touchStart = null;
+  let swipeHandled = false;
+  const SWIPE_THRESHOLD = 22;
+
+  function handleTouchStart(event) {
+    if (event.touches.length !== 1) {
+      return;
+    }
+    unlockAudio();
+    const touch = event.touches[0];
+    touchStart = { x: touch.clientX, y: touch.clientY };
+    swipeHandled = false;
+  }
+
+  function applySwipe(dx, dy) {
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (Math.max(absX, absY) < SWIPE_THRESHOLD) {
+      return false;
+    }
+    if (absX > absY) {
+      game.setDirection(dx > 0 ? DIRECTIONS.ArrowRight : DIRECTIONS.ArrowLeft);
+    } else {
+      game.setDirection(dy > 0 ? DIRECTIONS.ArrowDown : DIRECTIONS.ArrowUp);
+    }
+    if (game.getState().status === "idle") {
+      game.start();
+    }
+    return true;
+  }
+
+  function handleTouchMove(event) {
+    if (!touchStart || swipeHandled) {
+      return;
+    }
+    event.preventDefault();
+    const touch = event.touches[0];
+    const dx = touch.clientX - touchStart.x;
+    const dy = touch.clientY - touchStart.y;
+    if (applySwipe(dx, dy)) {
+      swipeHandled = true;
+    }
+  }
+
+  function handleTouchEnd(event) {
+    if (!touchStart) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - touchStart.x;
+    const dy = touch.clientY - touchStart.y;
+    if (!swipeHandled) {
+      applySwipe(dx, dy);
+    }
+    touchStart = null;
+    swipeHandled = false;
+  }
+
+  board.addEventListener("click", () => {
+    if (game.getState().status === "idle") {
+      game.start();
+    }
+  });
+  board.addEventListener("touchstart", handleTouchStart, { passive: true });
+  board.addEventListener("touchmove", handleTouchMove, { passive: false });
+  board.addEventListener("touchend", handleTouchEnd, { passive: true });
 
   render(game.getState());
+  updatePauseLabel();
+  updateStartLabel();
   setInterval(() => {
     game.step();
     render(game.getState());
+    updatePauseLabel();
+    updateStartLabel();
   }, TICK_MS);
 })();

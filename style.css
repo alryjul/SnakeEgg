@@ -23,11 +23,13 @@ body {
 }
 
 .app {
+  --content-width: min(100%, 680px);
   max-width: 820px;
   margin: 0 auto;
   padding: 32px 20px 48px;
   display: grid;
   gap: 20px;
+  justify-items: center;
 }
 
 .app__header {
@@ -36,6 +38,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  width: var(--content-width);
 }
 
 h1 {
@@ -75,9 +78,11 @@ h1 {
 .board-wrap {
   position: relative;
   background: var(--panel);
-  padding: 18px;
+  padding: 16px;
   border: 1px solid var(--grid);
   box-shadow: var(--shadow);
+  width: var(--content-width);
+  margin: 0 auto;
 }
 
 .board {
@@ -86,9 +91,11 @@ h1 {
   grid-template-columns: repeat(var(--size), minmax(0, 1fr));
   grid-template-rows: repeat(var(--size), minmax(0, 1fr));
   gap: 2px;
-  width: min(80vmin, 600px);
-  height: min(80vmin, 600px);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
   background: #d6d0c8;
+  touch-action: none;
 }
 
 .cell {
@@ -120,6 +127,7 @@ h1 {
   font-weight: 700;
   text-align: center;
   border: 1px solid var(--grid);
+  pointer-events: none;
 }
 
 .egg-man {
@@ -135,8 +143,9 @@ h1 {
 
 .app__footer {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 12px;
+  width: var(--content-width);
 }
 
 .btn {
@@ -147,16 +156,20 @@ h1 {
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  min-width: 140px;
 }
 
 .btn:active {
-  transform: translateY(1px);
+  transform: none;
 }
 
 @media (max-width: 600px) {
+  .app {
+    padding: 24px 16px 40px;
+  }
+
   .board {
-    width: min(86vmin, 420px);
-    height: min(86vmin, 420px);
+    width: 100%;
   }
 
   .score {
