@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Snake</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <div>
+          <h1>Snake</h1>
+          <p class="muted">Arrow keys or WASD. Enter to start. Space to pause. R to restart.</p>
+        </div>
+        <div class="score">
+          <span class="score__label">Score</span>
+          <span id="score" class="score__value">0</span>
+        </div>
+      </header>
+
+      <section class="board-wrap">
+        <div id="board" class="board" aria-label="Snake game board" role="grid"></div>
+        <div id="overlay" class="overlay" aria-live="polite">
+          <img id="egg-man" class="egg-man hidden" src="assets/egg-man.png" alt="Angry egg man" />
+          <div id="overlay-text">Press Start</div>
+        </div>
+      </section>
+
+      <footer class="app__footer">
+        <button id="start" class="btn" type="button">Start</button>
+        <button id="restart" class="btn" type="button">Restart</button>
+      </footer>
+    </main>
+
+    <script src="main.js" defer></script>
+    <audio id="evil-laugh" src="assets/evil-laugh.mp3" preload="auto"></audio>
+  </body>
+</html>

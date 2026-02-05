@@ -1,0 +1,282 @@
+(() => {
+  const BOARD_SIZE = 20;
+  const TICK_MS = 120;
+
+  const DIRECTIONS = {
+    ArrowUp: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 },
+    ArrowLeft: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 },
+    w: { x: 0, y: -1 },
+    s: { x: 0, y: 1 },
+    a: { x: -1, y: 0 },
+    d: { x: 1, y: 0 },
+  };
+
+  const OPPOSITES = new Map([
+    ["0,-1", "0,1"],
+    ["0,1", "0,-1"],
+    ["-1,0", "1,0"],
+    ["1,0", "-1,0"],
+  ]);
+
+  const board = document.getElementById("board");
+  const overlay = document.getElementById("overlay");
+  const overlayText = document.getElementById("overlay-text");
+  const eggMan = document.getElementById("egg-man");
+  const laughAudio = document.getElementById("evil-laugh");
+  const scoreEl = document.getElementById("score");
+  const restartBtn = document.getElementById("restart");
+
+  const cells = [];
+
+  function createGrid(size) {
+    board.style.setProperty("--size", size);
+    board.innerHTML = "";
+    cells.length = 0;
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.x = String(x);
+        cell.dataset.y = String(y);
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+  }
+
+  function indexFor(x, y, size) {
+    return y * size + x;
+  }
+
+  function pointsEqual(a, b) {
+    return a.x === b.x && a.y === b.y;
+  }
+
+  function nextHead(head, dir) {
+    return { x: head.x + dir.x, y: head.y + dir.y };
+  }
+
+  function wrap(point, size) {
+    return {
+      x: (point.x + size) % size,
+      y: (point.y + size) % size,
+    };
+  }
+
+  function occupies(snake, point) {
+    return snake.some((segment) => pointsEqual(segment, point));
+  }
+
+  function placeFood(size, snake, rng) {
+    const open = [];
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const point = { x, y };
+        if (!occupies(snake, point)) {
+          open.push(point);
+        }
+      }
+    }
+    if (open.length === 0) {
+      return null;
+    }
+    const index = Math.floor(rng() * open.length);
+    return open[index];
+  }
+
+  function createGame(rng = Math.random) {
+    const startPos = Math.floor(BOARD_SIZE / 2);
+    const state = {
+      size: BOARD_SIZE,
+      snake: [
+        { x: startPos, y: startPos },
+        { x: startPos - 1, y: startPos },
+        { x: startPos - 2, y: startPos },
+      ],
+      dir: { x: 1, y: 0 },
+      pendingDir: { x: 1, y: 0 },
+      food: null,
+      score: 0,
+      status: "idle",
+    };
+
+    state.food = placeFood(state.size, state.snake, rng);
+
+    function reset() {
+      const fresh = createGame(rng).getState();
+      state.size = fresh.size;
+      state.snake = fresh.snake;
+      state.dir = fresh.dir;
+      state.pendingDir = fresh.pendingDir;
+      state.food = fresh.food;
+      state.score = 0;
+      state.status = "idle";
+    }
+
+    function start() {
+      if (state.status === "idle" || state.status === "gameover" || state.status === "won") {
+        state.status = "playing";
+      }
+    }
+
+    function setDirection(next) {
+      const key = `${state.dir.x},${state.dir.y}`;
+      const nextKey = `${next.x},${next.y}`;
+      if (OPPOSITES.get(key) === nextKey) {
+        return;
+      }
+      state.pendingDir = next;
+    }
+
+    function step() {
+      if (state.status !== "playing") {
+        return;
+      }
+      state.dir = state.pendingDir;
+      const head = state.snake[0];
+      const next = wrap(nextHead(head, state.dir), state.size);
+      const tail = state.snake[state.snake.length - 1];
+      const hitSelf = occupies(state.snake, next) && !pointsEqual(next, tail);
+
+      if (hitSelf) {
+        state.status = "gameover";
+        return;
+      }
+
+      const ateFood = state.food && pointsEqual(next, state.food);
+      state.snake.unshift(next);
+      if (!ateFood) {
+        state.snake.pop();
+      } else {
+        state.score += 1;
+        state.food = placeFood(state.size, state.snake, rng);
+        if (!state.food) {
+          state.status = "won";
+        }
+      }
+    }
+
+    function togglePause() {
+      if (state.status === "playing") {
+        state.status = "paused";
+      } else if (state.status === "paused") {
+        state.status = "playing";
+      }
+    }
+
+    function getState() {
+      return JSON.parse(JSON.stringify(state));
+    }
+
+    return { reset, start, setDirection, step, togglePause, getState };
+  }
+
+  createGrid(BOARD_SIZE);
+  const game = createGame();
+  const scolds = [
+    "Is that all you've got?",
+    "Pathetic. Try harder.",
+    "You call that a snake?",
+    "Do better. Much better.",
+    "Embarrassing performance.",
+    "Hopeless. Try again.",
+  ];
+  let lastStatus = game.getState().status;
+  let currentScold = "";
+
+  function render(state) {
+    cells.forEach((cell) => {
+      cell.className = "cell";
+    });
+
+    state.snake.forEach((segment, index) => {
+      const cell = cells[indexFor(segment.x, segment.y, state.size)];
+      if (!cell) {
+        return;
+      }
+      cell.classList.add(index === 0 ? "cell--head" : "cell--snake");
+    });
+
+    if (state.food) {
+      const foodCell = cells[indexFor(state.food.x, state.food.y, state.size)];
+      if (foodCell) {
+        foodCell.classList.add("cell--food");
+      }
+    }
+
+    scoreEl.textContent = String(state.score);
+
+    if (state.status === "paused") {
+      overlayText.textContent = "Paused";
+      overlay.classList.remove("hidden");
+      eggMan.classList.add("hidden");
+    } else if (state.status === "idle") {
+      overlayText.textContent = "Press Start";
+      overlay.classList.remove("hidden");
+      eggMan.classList.add("hidden");
+    } else if (state.status === "gameover") {
+      if (lastStatus !== "gameover") {
+        currentScold = scolds[Math.floor(Math.random() * scolds.length)];
+        if (laughAudio) {
+          if (laughAudio.readyState >= 2) {
+            laughAudio.currentTime = 0;
+            laughAudio.play().catch(() => {});
+          }
+        }
+      }
+      overlayText.textContent = currentScold;
+      overlay.classList.remove("hidden");
+      eggMan.classList.remove("hidden");
+    } else if (state.status === "won") {
+      overlayText.textContent = "You Win";
+      overlay.classList.remove("hidden");
+      eggMan.classList.add("hidden");
+    } else {
+      overlay.classList.add("hidden");
+      eggMan.classList.add("hidden");
+    }
+
+    lastStatus = state.status;
+  }
+
+  function handleKey(event) {
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    if (key in DIRECTIONS) {
+      event.preventDefault();
+      game.setDirection(DIRECTIONS[key]);
+      if (game.getState().status === "idle") {
+        game.start();
+      }
+      return;
+    }
+
+    if (key === " " || key === "Spacebar") {
+      event.preventDefault();
+      game.togglePause();
+      return;
+    }
+
+    if (key === "r" || key === "R") {
+      event.preventDefault();
+      game.reset();
+    }
+
+    if (key === "Enter") {
+      event.preventDefault();
+      game.start();
+    }
+  }
+
+  document.addEventListener("keydown", handleKey);
+  const startBtn = document.getElementById("start");
+  startBtn.addEventListener("click", () => game.start());
+  restartBtn.addEventListener("click", () => game.reset());
+
+  render(game.getState());
+  setInterval(() => {
+    game.step();
+    render(game.getState());
+  }, TICK_MS);
+})();
