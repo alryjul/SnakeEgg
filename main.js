@@ -259,6 +259,7 @@
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (key in DIRECTIONS) {
       event.preventDefault();
+      unlockAudio();
       game.setDirection(DIRECTIONS[key]);
       if (game.getState().status === "idle") {
         game.start();
@@ -268,18 +269,21 @@
 
     if (key === " " || key === "Spacebar") {
       event.preventDefault();
+      unlockAudio();
       game.togglePause();
       return;
     }
 
     if (key === "r" || key === "R") {
       event.preventDefault();
+      unlockAudio();
       game.reset();
       game.start();
     }
 
     if (key === "Enter") {
       event.preventDefault();
+      unlockAudio();
       game.start();
     }
   }
@@ -298,6 +302,8 @@
     if (!laughAudio || audioUnlocked) {
       return;
     }
+    laughAudio.muted = true;
+    laughAudio.volume = 0;
     laughAudio.play()
       .then(() => {
         laughAudio.pause();
@@ -307,6 +313,7 @@
       .catch(() => {});
   };
   startBtn.addEventListener("click", () => {
+    unlockAudio();
     if (game.getState().status === "idle") {
       game.start();
     } else {
@@ -315,6 +322,7 @@
     }
   });
   pauseBtn.addEventListener("click", () => {
+    unlockAudio();
     game.togglePause();
     updatePauseLabel();
   });
@@ -378,6 +386,7 @@
   }
 
   board.addEventListener("click", () => {
+    unlockAudio();
     if (game.getState().status === "idle") {
       game.start();
     }
