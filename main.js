@@ -196,6 +196,10 @@
     laughAudio.muted = true;
     laughAudio.volume = 0;
   }
+  if (eggMan) {
+    const preload = new Image();
+    preload.src = eggMan.src;
+  }
 
   function render(state) {
     cells.forEach((cell) => {
@@ -231,13 +235,12 @@
       if (lastStatus !== "gameover") {
         currentScold = scolds[Math.floor(Math.random() * scolds.length)];
         if (laughAudio && laughAudio.readyState >= 2) {
-          if (!audioUnlocked) {
+          if (audioUnlocked) {
+            laughAudio.muted = false;
+            laughAudio.volume = laughVolume;
+            laughAudio.currentTime = 0;
             laughAudio.play().catch(() => {});
           }
-          laughAudio.muted = false;
-          laughAudio.volume = laughVolume;
-          laughAudio.currentTime = 0;
-          laughAudio.play().catch(() => {});
         }
       }
       overlayText.textContent = currentScold;
